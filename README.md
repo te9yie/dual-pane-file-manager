@@ -1,0 +1,1 @@
+# dual-pane-file-manager
