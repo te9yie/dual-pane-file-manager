@@ -1,34 +1,63 @@
-use crossterm::event::{read, Event, KeyCode};
-use std::io::stdout;
-use tui::{
-    backend::CrosstermBackend,
-    widgets::{Block, Borders},
-    Terminal,
+use action::Action;
+use crossterm::{
+    event::{read, Event},
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
+use std::io::{stdout, Stdout};
+use tui::{backend::CrosstermBackend, Terminal};
+
+mod action;
+mod app;
+
+struct Main {
+    terminal: Terminal<CrosstermBackend<Stdout>>,
+}
+
+impl Main {
+    fn new() -> crossterm::Result<Self> {
+        let stdout = stdout();
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
+        execute!(terminal.backend_mut(), EnterAlternateScreen)?;
+        Ok(Self { terminal })
+    }
+}
+
+impl Drop for Main {
+    fn drop(&mut self) {
+        execute!(self.terminal.backend_mut(), LeaveAlternateScreen).unwrap();
+    }
+}
 
 fn main() {
-    let stdout = stdout();
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend).unwrap();
+    let mut main = Main::new().unwrap();
+    let mut app = app::App::new();
 
-    terminal.clear().unwrap();
-    terminal
+    main.terminal
         .draw(|f| {
-            let area = f.size();
-            let block = Block::default()
-                .title("dual-pane-file-manager")
-                .borders(Borders::ALL);
-            f.render_widget(block, area);
+            app.on_draw(f, f.size());
         })
         .unwrap();
 
     while let Ok(event) = read() {
         match event {
-            Event::Key(key) => match key.code {
-                KeyCode::Char('q') => break,
-                _ => {}
-            },
+            Event::Key(key) => {
+                if let Some(action) = app.on_event(&key) {
+                    app.on_dispatch(&action);
+                    match action {
+                        Action::Quit => break,
+                        //_ => continue,
+                    }
+                }
+            }
             _ => {}
         }
+
+        main.terminal
+            .draw(|f| {
+                app.on_draw(f, f.size());
+            })
+            .unwrap();
     }
 }
