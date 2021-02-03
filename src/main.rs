@@ -4,11 +4,15 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::io::{stdout, Stdout};
+use std::{
+    env::current_dir,
+    io::{stdout, Stdout},
+};
 use tui::{backend::CrosstermBackend, Terminal};
 
 mod action;
 mod app;
+mod dir;
 
 struct Main {
     terminal: Terminal<CrosstermBackend<Stdout>>,
@@ -31,8 +35,9 @@ impl Drop for Main {
 }
 
 fn main() {
+    let path = current_dir().unwrap();
     let mut main = Main::new().unwrap();
-    let mut app = app::App::new();
+    let mut app = app::App::new(path.as_path()).unwrap();
 
     main.terminal
         .draw(|f| {

@@ -1,18 +1,22 @@
+use std::{io, path::Path};
+
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    layout::Rect,
-    widgets::{Block, Borders},
+    layout::{Constraint, Direction, Layout, Rect},
     Frame,
 };
 
-use crate::action::Action;
+use crate::{action::Action, dir::Dir};
 
-pub struct App;
+pub struct App {
+    dirs: [Dir; 2],
+}
 
 impl App {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(path: &Path) -> io::Result<Self> {
+        let dirs = [Dir::new(path)?, Dir::new(path)?];
+        Ok(Self { dirs })
     }
 
     pub fn on_event(&self, key: &KeyEvent) -> Option<Action> {
@@ -25,9 +29,12 @@ impl App {
     pub fn on_dispatch(&mut self, _action: &Action) {}
 
     pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
-        let block = Block::default()
-            .title("dual-pane-file-manager")
-            .borders(Borders::ALL);
-        f.render_widget(block, area);
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+        for (i, chunk) in chunks.iter().enumerate() {
+            self.dirs[i].on_draw(f, *chunk);
+        }
     }
 }
