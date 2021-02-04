@@ -43,10 +43,23 @@ struct Entry {
     raw: DirEntry,
 }
 
+impl Entry {
+    fn new(entry: DirEntry) -> Self {
+        Self { raw: entry }
+    }
+
+    fn is_dir(&self) -> bool {
+        match self.raw.file_type() {
+            Ok(file_type) => file_type.is_dir(),
+            _ => false,
+        }
+    }
+}
+
 fn get_entries(path: &Path) -> io::Result<Vec<Entry>> {
     let mut entries = read_dir(path)?
         .filter_map(|entry| match entry {
-            Ok(entry) => Some(Entry { raw: entry }),
+            Ok(entry) => Some(Entry::new(entry)),
             _ => None,
         })
         .collect::<Vec<_>>();
@@ -89,11 +102,42 @@ impl Dir {
             state,
         })
     }
+    pub fn new_with_index(path: &Path, index_path: &Path) -> io::Result<Self> {
+        let entries = get_entries(path)?;
+        let mut state = TableState::default();
+        let index = entries
+            .iter()
+            .position(|entry| entry.raw.path() == index_path)
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        state.select(Some(index));
+        Ok(Self {
+            path: path.into(),
+            entries,
+            state,
+        })
+    }
 
     pub fn on_event(&self, key: &KeyEvent) -> Option<Action> {
         match key.code {
             KeyCode::Char('j') => Some(Action::CursorDown),
             KeyCode::Char('k') => Some(Action::CursorUp),
+            KeyCode::Enter => self.on_enter(),
+            _ => None,
+        }
+    }
+
+    fn on_enter(&self) -> Option<Action> {
+        match self.state.selected() {
+            Some(0) => Some(Action::ChangeDirToParent(self.path.clone())),
+            Some(index) => {
+                let entry = &self.entries[index - 1];
+                if entry.is_dir() {
+                    Some(Action::ChangeDir(entry.raw.path().clone()))
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }

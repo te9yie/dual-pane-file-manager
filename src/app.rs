@@ -38,7 +38,22 @@ impl App {
         self.src_dir_mut().on_dispatch(action);
         match action {
             Action::SwitchSrc => self.src_index = 1 - self.src_index,
+            Action::ChangeDir(path) => self.change_dir(path.as_path()),
+            Action::ChangeDirToParent(path) => self.change_dir_to_parent(path.as_path()),
             _ => {}
+        }
+    }
+
+    fn change_dir(&mut self, path: &Path) {
+        if let Ok(dir) = Dir::new(path) {
+            self.dirs[self.src_index] = dir;
+        }
+    }
+    fn change_dir_to_parent(&mut self, path: &Path) {
+        if let Some(parent_path) = path.parent() {
+            if let Ok(dir) = Dir::new_with_index(parent_path, path) {
+                self.dirs[self.src_index] = dir;
+            }
         }
     }
 
