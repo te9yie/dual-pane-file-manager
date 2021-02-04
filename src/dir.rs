@@ -1,6 +1,7 @@
 use chrono::{DateTime, Local};
+use crossterm::event::{KeyCode, KeyEvent};
 use std::{
-    cmp::Ordering,
+    cmp::{min, Ordering},
     ffi::OsString,
     fs::{self, read_dir, DirEntry, Metadata},
     io,
@@ -10,9 +11,11 @@ use tui::{
     backend::Backend,
     layout::{Constraint, Rect},
     style::{Modifier, Style},
-    widgets::{Block, Borders, Row, Table},
+    widgets::{Block, Borders, Row, Table, TableState},
     Frame,
 };
+
+use crate::action::Action;
 
 fn get_file_name(name: &OsString, meta: &Metadata) -> String {
     let name = name.to_string_lossy().to_string();
@@ -72,20 +75,53 @@ fn default_sort(a: &Entry, b: &Entry) -> Ordering {
 pub struct Dir {
     path: PathBuf,
     entries: Vec<Entry>,
+    state: TableState,
 }
 
 impl Dir {
     pub fn new(path: &Path) -> io::Result<Self> {
         let entries = get_entries(path)?;
+        let mut state = TableState::default();
+        state.select(Some(0));
         Ok(Self {
             path: path.into(),
             entries,
+            state,
         })
     }
 
-    pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+    pub fn on_event(&self, key: &KeyEvent) -> Option<Action> {
+        match key.code {
+            KeyCode::Char('j') => Some(Action::CursorDown),
+            KeyCode::Char('k') => Some(Action::CursorUp),
+            _ => None,
+        }
+    }
+
+    pub fn on_dispatch(&mut self, action: &Action) {
+        match action {
+            Action::CursorDown => self.cursor_down(),
+            Action::CursorUp => self.cursor_up(),
+            _ => {}
+        }
+    }
+
+    fn cursor_down(&mut self) {
+        if let Some(index) = self.state.selected() {
+            let index = min(index + 1, self.entries.len());
+            self.state.select(Some(index));
+        }
+    }
+    fn cursor_up(&mut self) {
+        if let Some(index) = self.state.selected() {
+            let index = index.saturating_sub(1);
+            self.state.select(Some(index));
+        }
+    }
+
+    pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect, is_src: bool) {
         let modified = get_modified(fs::metadata(self.path.as_path()).ok());
-        let date_len = modified.len() as u16;
+        let date_width = modified.len() as u16;
 
         let mut list = vec![Row::new(vec!["..".to_string(), modified])];
         list.extend(self.entries.iter().filter_map(|entry| {
@@ -99,17 +135,22 @@ impl Dir {
         }));
 
         let widths = {
-            let name_len = area.width - date_len - 3/* for borders */;
-            [Constraint::Length(name_len), Constraint::Length(date_len)]
+            let name_width = area.width - date_width - 3/* for borders */;
+            [
+                Constraint::Length(name_width),
+                Constraint::Length(date_width),
+            ]
         };
-        let table = Table::new(list)
-            .widths(&widths)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(self.path.to_string_lossy().to_string()),
-            )
-            .highlight_style(Style::default().add_modifier(Modifier::UNDERLINED));
-        f.render_widget(table, area);
+        let table = Table::new(list).widths(&widths).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(self.path.to_string_lossy().to_string()),
+        );
+        let table = if is_src {
+            table.highlight_style(Style::default().add_modifier(Modifier::UNDERLINED))
+        } else {
+            table
+        };
+        f.render_stateful_widget(table, area, &mut self.state);
     }
 }

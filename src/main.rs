@@ -47,15 +47,16 @@ fn main() {
 
     while let Ok(event) = read() {
         match event {
-            Event::Key(key) => {
-                if let Some(action) = app.on_event(&key) {
+            Event::Key(key) => match app.on_event(&key) {
+                Some(action) => {
                     app.on_dispatch(&action);
                     match action {
                         Action::Quit => break,
-                        //_ => continue,
+                        _ => {}
                     }
                 }
-            }
+                _ => continue,
+            },
             _ => {}
         }
 
