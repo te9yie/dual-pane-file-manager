@@ -2,7 +2,7 @@ use action::Action;
 use crossterm::{
     event::{read, Event},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::{
     env::current_dir,
@@ -25,12 +25,14 @@ impl Main {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
         execute!(terminal.backend_mut(), EnterAlternateScreen)?;
+        enable_raw_mode()?;
         Ok(Self { terminal })
     }
 }
 
 impl Drop for Main {
     fn drop(&mut self) {
+        let _ = disable_raw_mode();
         let _ = execute!(self.terminal.backend_mut(), LeaveAlternateScreen);
     }
 }
