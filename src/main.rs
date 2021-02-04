@@ -30,7 +30,7 @@ impl Main {
 
 impl Drop for Main {
     fn drop(&mut self) {
-        execute!(self.terminal.backend_mut(), LeaveAlternateScreen).unwrap();
+        let _ = execute!(self.terminal.backend_mut(), LeaveAlternateScreen);
     }
 }
 
