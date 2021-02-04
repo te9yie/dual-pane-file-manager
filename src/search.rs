@@ -16,7 +16,7 @@ pub struct SearchLine {
 impl SearchLine {
     pub fn new() -> Self {
         Self {
-            pattern: "".to_string(),
+            pattern: String::new(),
         }
     }
 
@@ -24,6 +24,10 @@ impl SearchLine {
         match key.code {
             KeyCode::Char(c) => {
                 self.pattern.push(c);
+                Some(Action::Search(self.pattern.clone()))
+            }
+            KeyCode::Backspace => {
+                self.pattern.pop();
                 Some(Action::Search(self.pattern.clone()))
             }
             _ => Some(Action::EndSearch),

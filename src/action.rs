@@ -6,6 +6,7 @@ pub enum Action {
     CursorDown,
     CursorToFirst,
     CursorToLast,
+    ToggleMark,
     SwitchSrc,
     ChangeDir(PathBuf),
     ChangeDirToParent(PathBuf),

@@ -41,11 +41,15 @@ fn get_modified(meta: Option<Metadata>) -> String {
 
 struct Entry {
     raw: DirEntry,
+    mark: bool,
 }
 
 impl Entry {
     fn new(entry: DirEntry) -> Self {
-        Self { raw: entry }
+        Self {
+            raw: entry,
+            mark: false,
+        }
     }
 
     fn is_dir(&self) -> bool {
@@ -126,6 +130,7 @@ impl Dir {
             KeyCode::Char('l') => self.on_change_dir(),
             KeyCode::Char('g') => Some(Action::CursorToFirst),
             KeyCode::Char('G') => Some(Action::CursorToLast),
+            KeyCode::Char(' ') => Some(Action::ToggleMark),
             KeyCode::Enter => self.on_enter(),
             _ => None,
         }
@@ -166,6 +171,7 @@ impl Dir {
             Action::CursorUp => self.cursor_up(),
             Action::CursorToFirst => self.cursor_to_first(),
             Action::CursorToLast => self.cursor_to_last(),
+            Action::ToggleMark => self.toggle_mark(),
             _ => {}
         }
     }
@@ -190,6 +196,17 @@ impl Dir {
     fn cursor_to_last(&mut self) {
         if self.state.selected().is_some() {
             self.state.select(Some(self.entries.len()));
+        }
+    }
+    fn toggle_mark(&mut self) {
+        match self.state.selected() {
+            Some(0) => self.cursor_down(),
+            Some(index) => {
+                let entry = &mut self.entries[index - 1];
+                entry.mark = !entry.mark;
+                self.cursor_down();
+            }
+            _ => {}
         }
     }
 
@@ -217,7 +234,12 @@ impl Dir {
             if let Ok(meta) = entry.raw.metadata() {
                 let name = get_file_name(&entry.raw.file_name(), &meta);
                 let date = get_modified(Some(meta));
-                Some(Row::new(vec![name, date]))
+                let row = Row::new(vec![name, date]);
+                Some(if entry.mark {
+                    row.style(Style::default().add_modifier(Modifier::REVERSED))
+                } else {
+                    row
+                })
             } else {
                 None
             }
