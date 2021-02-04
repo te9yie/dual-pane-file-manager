@@ -1,4 +1,4 @@
-use std::{io, path::Path};
+use std::{io, path::Path, rc::Rc};
 
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
@@ -7,19 +7,24 @@ use tui::{
     Frame,
 };
 
-use crate::{action::Action, dir::Dir, search::SearchLine};
+use crate::{action::Action, config::Config, dir::Dir, search::SearchLine};
 
 pub struct App {
+    config: Rc<Config>,
     dirs: [Dir; 2],
     src_index: usize,
     search_line: Option<SearchLine>,
 }
 
 impl App {
-    pub fn new(path: &Path) -> io::Result<Self> {
-        let dirs = [Dir::new(path)?, Dir::new(path)?];
+    pub fn new(config: Rc<Config>, path: &Path) -> io::Result<Self> {
+        let dirs = [
+            Dir::new(Rc::clone(&config), path)?,
+            Dir::new(Rc::clone(&config), path)?,
+        ];
         let src_index = 0usize;
         Ok(Self {
+            config,
             dirs,
             src_index,
             search_line: None,
@@ -58,13 +63,13 @@ impl App {
     }
 
     fn change_dir(&mut self, path: &Path) {
-        if let Ok(dir) = Dir::new(path) {
+        if let Ok(dir) = Dir::new(Rc::clone(&self.config), path) {
             self.dirs[self.src_index] = dir;
         }
     }
     fn change_dir_to_parent(&mut self, path: &Path) {
         if let Some(parent_path) = path.parent() {
-            if let Ok(dir) = Dir::new_with_index(parent_path, path) {
+            if let Ok(dir) = Dir::new_with_index(Rc::clone(&self.config), parent_path, path) {
                 self.dirs[self.src_index] = dir;
             }
         }

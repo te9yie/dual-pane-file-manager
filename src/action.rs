@@ -10,6 +10,7 @@ pub enum Action {
     SwitchSrc,
     ChangeDir(PathBuf),
     ChangeDirToParent(PathBuf),
+    Execute(PathBuf),
     StartSearch,
     EndSearch,
     Search(String),

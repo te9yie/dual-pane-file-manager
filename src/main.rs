@@ -1,4 +1,5 @@
 use action::Action;
+use config::Config;
 use crossterm::{
     event::{read, Event},
     execute,
@@ -7,11 +8,13 @@ use crossterm::{
 use std::{
     env::current_dir,
     io::{stdout, Stdout},
+    rc::Rc,
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
 mod action;
 mod app;
+mod config;
 mod dir;
 mod search;
 
@@ -38,9 +41,10 @@ impl Drop for Main {
 }
 
 fn main() {
+    let config = Rc::new(Config::default().unwrap());
     let path = current_dir().unwrap();
     let mut main = Main::new().unwrap();
-    let mut app = app::App::new(path.as_path()).unwrap();
+    let mut app = app::App::new(config, path.as_path()).unwrap();
 
     main.terminal
         .draw(|f| {

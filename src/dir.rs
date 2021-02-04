@@ -6,6 +6,7 @@ use std::{
     fs::{self, read_dir, DirEntry, Metadata},
     io,
     path::{Path, PathBuf},
+    rc::Rc,
 };
 use tui::{
     backend::Backend,
@@ -15,7 +16,7 @@ use tui::{
     Frame,
 };
 
-use crate::action::Action;
+use crate::{action::Action, config::Config};
 
 fn get_file_name(name: &OsString, meta: &Metadata) -> String {
     let name = name.to_string_lossy().to_string();
@@ -90,23 +91,25 @@ fn default_sort(a: &Entry, b: &Entry) -> Ordering {
 }
 
 pub struct Dir {
+    config: Rc<Config>,
     path: PathBuf,
     entries: Vec<Entry>,
     state: TableState,
 }
 
 impl Dir {
-    pub fn new(path: &Path) -> io::Result<Self> {
+    pub fn new(config: Rc<Config>, path: &Path) -> io::Result<Self> {
         let entries = get_entries(path)?;
         let mut state = TableState::default();
         state.select(Some(0));
         Ok(Self {
+            config,
             path: path.into(),
             entries,
             state,
         })
     }
-    pub fn new_with_index(path: &Path, index_path: &Path) -> io::Result<Self> {
+    pub fn new_with_index(config: Rc<Config>, path: &Path, index_path: &Path) -> io::Result<Self> {
         let entries = get_entries(path)?;
         let mut state = TableState::default();
         let index = entries
@@ -116,6 +119,7 @@ impl Dir {
             .unwrap_or(0);
         state.select(Some(index));
         Ok(Self {
+            config,
             path: path.into(),
             entries,
             state,
@@ -158,7 +162,7 @@ impl Dir {
                 if entry.is_dir() {
                     Some(Action::ChangeDir(entry.raw.path().clone()))
                 } else {
-                    None
+                    Some(Action::Execute(entry.raw.path().clone()))
                 }
             }
             _ => None,
@@ -172,6 +176,7 @@ impl Dir {
             Action::CursorToFirst => self.cursor_to_first(),
             Action::CursorToLast => self.cursor_to_last(),
             Action::ToggleMark => self.toggle_mark(),
+            Action::Execute(path) => self.config.exec(path.as_path(), self.path.as_path()),
             _ => {}
         }
     }
