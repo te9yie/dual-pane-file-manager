@@ -122,11 +122,29 @@ impl Dir {
         match key.code {
             KeyCode::Char('j') => Some(Action::CursorDown),
             KeyCode::Char('k') => Some(Action::CursorUp),
+            KeyCode::Char('h') => Some(Action::ChangeDirToParent(self.path.clone())),
+            KeyCode::Char('l') => self.on_change_dir(),
+            KeyCode::Char('g') => Some(Action::CursorToFirst),
+            KeyCode::Char('G') => Some(Action::CursorToLast),
             KeyCode::Enter => self.on_enter(),
             _ => None,
         }
     }
 
+    fn on_change_dir(&self) -> Option<Action> {
+        match self.state.selected() {
+            Some(0) => None,
+            Some(index) => {
+                let entry = &self.entries[index - 1];
+                if entry.is_dir() {
+                    Some(Action::ChangeDir(entry.raw.path().clone()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
     fn on_enter(&self) -> Option<Action> {
         match self.state.selected() {
             Some(0) => Some(Action::ChangeDirToParent(self.path.clone())),
@@ -146,6 +164,8 @@ impl Dir {
         match action {
             Action::CursorDown => self.cursor_down(),
             Action::CursorUp => self.cursor_up(),
+            Action::CursorToFirst => self.cursor_to_first(),
+            Action::CursorToLast => self.cursor_to_last(),
             _ => {}
         }
     }
@@ -159,6 +179,31 @@ impl Dir {
     fn cursor_up(&mut self) {
         if let Some(index) = self.state.selected() {
             let index = index.saturating_sub(1);
+            self.state.select(Some(index));
+        }
+    }
+    fn cursor_to_first(&mut self) {
+        if self.state.selected().is_some() {
+            self.state.select(Some(0));
+        }
+    }
+    fn cursor_to_last(&mut self) {
+        if self.state.selected().is_some() {
+            self.state.select(Some(self.entries.len()));
+        }
+    }
+
+    pub fn search(&mut self, pattern: &String) {
+        let index = self
+            .entries
+            .iter()
+            .position(|entry| {
+                let name = entry.raw.file_name().to_string_lossy().to_lowercase();
+                let pattern = pattern.to_lowercase();
+                name.starts_with(&pattern)
+            })
+            .map(|i| i + 1);
+        if let Some(index) = index {
             self.state.select(Some(index));
         }
     }

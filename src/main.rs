@@ -13,6 +13,7 @@ use tui::{backend::CrosstermBackend, Terminal};
 mod action;
 mod app;
 mod dir;
+mod search;
 
 struct Main {
     terminal: Terminal<CrosstermBackend<Stdout>>,
