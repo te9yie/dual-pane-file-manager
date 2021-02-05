@@ -284,6 +284,24 @@ impl Dir {
             }
         }
     }
+    pub fn delete_marks(&mut self) {
+        for entry in self.entries.iter_mut() {
+            if entry.mark {
+                if entry.is_dir() {
+                    match fs::remove_dir_all(entry.raw.path()) {
+                        Err(e) => eprintln!("{}", e.to_string()),
+                        _ => {}
+                    }
+                } else {
+                    match fs::remove_file(entry.raw.path()) {
+                        Err(e) => eprintln!("{}", e.to_string()),
+                        _ => {}
+                    }
+                }
+                entry.mark = false;
+            }
+        }
+    }
 
     pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect, is_src: bool) {
         let modified = get_modified(fs::metadata(self.path.as_path()).ok());

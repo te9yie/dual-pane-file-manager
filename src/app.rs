@@ -42,6 +42,7 @@ impl App {
                     KeyCode::Char('/') => Some(Action::StartSearch),
                     KeyCode::Char('c') => Some(Action::Copy),
                     KeyCode::Char('m') => Some(Action::Move),
+                    KeyCode::Char('d') => Some(Action::Delete),
                     KeyCode::Tab => Some(Action::SwitchSrc),
                     _ => None,
                 }
@@ -62,6 +63,7 @@ impl App {
             Action::Search(pattern) => self.src_dir_mut().search(pattern),
             Action::Copy => self.copy_marks(),
             Action::Move => self.move_marks(),
+            Action::Delete => self.delete_marks(),
             _ => {}
         }
     }
@@ -89,6 +91,10 @@ impl App {
         self.src_dir_mut().move_marks(path.as_path());
         self.src_dir_mut().refresh();
         self.dest_dir_mut().refresh();
+    }
+    fn delete_marks(&mut self) {
+        self.src_dir_mut().delete_marks();
+        self.src_dir_mut().refresh();
     }
 
     pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {

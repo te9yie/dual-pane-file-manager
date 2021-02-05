@@ -17,4 +17,5 @@ pub enum Action {
     Search(String),
     Copy,
     Move,
+    Delete,
 }
