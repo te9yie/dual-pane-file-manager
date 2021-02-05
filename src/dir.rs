@@ -126,6 +126,19 @@ impl Dir {
         })
     }
 
+    pub fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
+    pub fn refresh(&mut self) {
+        let entries = get_entries(self.path.as_path()).unwrap_or_default();
+        let index = self.state.selected().unwrap_or_default();
+        let mut state = TableState::default();
+        state.select(Some(min(index, entries.len())));
+        self.entries = entries;
+        self.state = state;
+    }
+
     pub fn on_event(&self, key: &KeyEvent) -> Option<Action> {
         match key.code {
             KeyCode::Char('j') => Some(Action::CursorDown),
@@ -243,6 +256,32 @@ impl Dir {
             .map(|i| i + 1);
         if let Some(index) = index {
             self.state.select(Some(index));
+        }
+    }
+    pub fn copy_marks(&mut self, dest_dir: &Path) {
+        for entry in self.entries.iter_mut() {
+            if entry.mark {
+                let mut dest = PathBuf::from(dest_dir);
+                dest.push(entry.raw.file_name());
+                match fs::copy(entry.raw.path(), dest) {
+                    Err(e) => eprintln!("{}", e.to_string()),
+                    _ => {}
+                }
+                entry.mark = false;
+            }
+        }
+    }
+    pub fn move_marks(&mut self, dest_dir: &Path) {
+        for entry in self.entries.iter_mut() {
+            if entry.mark {
+                let mut dest = PathBuf::from(dest_dir);
+                dest.push(entry.raw.file_name());
+                match fs::rename(entry.raw.path(), dest) {
+                    Err(e) => eprintln!("{}", e.to_string()),
+                    _ => {}
+                }
+                entry.mark = false;
+            }
         }
     }
 

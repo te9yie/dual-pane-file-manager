@@ -15,4 +15,6 @@ pub enum Action {
     StartSearch,
     EndSearch,
     Search(String),
+    Copy,
+    Move,
 }

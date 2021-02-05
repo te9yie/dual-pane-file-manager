@@ -40,6 +40,8 @@ impl App {
                 match key.code {
                     KeyCode::Char('q') => Some(Action::Quit),
                     KeyCode::Char('/') => Some(Action::StartSearch),
+                    KeyCode::Char('c') => Some(Action::Copy),
+                    KeyCode::Char('m') => Some(Action::Move),
                     KeyCode::Tab => Some(Action::SwitchSrc),
                     _ => None,
                 }
@@ -58,6 +60,8 @@ impl App {
             Action::StartSearch => self.search_line = Some(SearchLine::new()),
             Action::EndSearch => self.search_line = None,
             Action::Search(pattern) => self.src_dir_mut().search(pattern),
+            Action::Copy => self.copy_marks(),
+            Action::Move => self.move_marks(),
             _ => {}
         }
     }
@@ -73,6 +77,18 @@ impl App {
                 self.dirs[self.src_index] = dir;
             }
         }
+    }
+    fn copy_marks(&mut self) {
+        let path = self.dest_dir().path();
+        self.src_dir_mut().copy_marks(path.as_path());
+        self.src_dir_mut().refresh();
+        self.dest_dir_mut().refresh();
+    }
+    fn move_marks(&mut self) {
+        let path = self.dest_dir().path();
+        self.src_dir_mut().move_marks(path.as_path());
+        self.src_dir_mut().refresh();
+        self.dest_dir_mut().refresh();
     }
 
     pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
@@ -99,5 +115,11 @@ impl App {
     }
     fn src_dir_mut(&mut self) -> &mut Dir {
         &mut self.dirs[self.src_index]
+    }
+    fn dest_dir(&self) -> &Dir {
+        &self.dirs[1 - self.src_index]
+    }
+    fn dest_dir_mut(&mut self) -> &mut Dir {
+        &mut self.dirs[1 - self.src_index]
     }
 }
