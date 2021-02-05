@@ -25,6 +25,7 @@ struct ExecCommand {
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     exec_command: Option<ExecCommand>,
+    edit_command: Option<ExecCommand>,
 }
 
 impl Config {
@@ -49,12 +50,19 @@ impl Config {
                 program: "explorer".to_owned(),
                 args: "%p".to_owned(),
             }),
+            edit_command: Some(ExecCommand {
+                program: "gvim".to_owned(),
+                args: "%p".to_owned(),
+            }),
         }
     }
 
     #[cfg(not(target_os = "windows"))]
     fn default_self() -> Self {
-        Self { exec_command: None }
+        Self {
+            exec_command: None,
+            edit_command: None,
+        }
     }
 
     pub fn exec(&self, path: &Path, dir: &Path) {
@@ -64,7 +72,18 @@ impl Config {
             let _ = Command::new(&command.program)
                 .current_dir(dir)
                 .arg(args)
-                .status();
+                .spawn();
+        }
+    }
+
+    pub fn edit(&self, path: &Path, dir: &Path) {
+        if let Some(command) = &self.edit_command {
+            let path = path.to_string_lossy().to_string();
+            let args = command.args.replace("%p", &path);
+            let _ = Command::new(&command.program)
+                .current_dir(dir)
+                .arg(args)
+                .spawn();
         }
     }
 }

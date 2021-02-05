@@ -136,6 +136,7 @@ impl Dir {
             KeyCode::Char('G') => Some(Action::CursorToLast),
             KeyCode::Char(' ') => Some(Action::ToggleMark),
             KeyCode::Enter => self.on_enter(),
+            KeyCode::Char('e') => self.on_edit(),
             _ => None,
         }
     }
@@ -168,6 +169,20 @@ impl Dir {
             _ => None,
         }
     }
+    fn on_edit(&self) -> Option<Action> {
+        match self.state.selected() {
+            Some(0) => None,
+            Some(index) => {
+                let entry = &self.entries[index - 1];
+                if entry.is_dir() {
+                    None
+                } else {
+                    Some(Action::Edit(entry.raw.path().clone()))
+                }
+            }
+            _ => None,
+        }
+    }
 
     pub fn on_dispatch(&mut self, action: &Action) {
         match action {
@@ -177,6 +192,7 @@ impl Dir {
             Action::CursorToLast => self.cursor_to_last(),
             Action::ToggleMark => self.toggle_mark(),
             Action::Execute(path) => self.config.exec(path.as_path(), self.path.as_path()),
+            Action::Edit(path) => self.config.edit(path.as_path(), self.path.as_path()),
             _ => {}
         }
     }

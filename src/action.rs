@@ -11,6 +11,7 @@ pub enum Action {
     ChangeDir(PathBuf),
     ChangeDirToParent(PathBuf),
     Execute(PathBuf),
+    Edit(PathBuf),
     StartSearch,
     EndSearch,
     Search(String),
