@@ -9,6 +9,7 @@ pub enum Action {
     CursorToLast,
     ToggleMark,
     SwitchSrc,
+    DuplicateDir,
     ChangeDir(PathBuf),
     ChangeDirToParent(PathBuf),
     Execute(PathBuf),

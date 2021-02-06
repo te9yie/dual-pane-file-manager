@@ -49,12 +49,13 @@ impl App {
             if action.is_none() {
                 match key.code {
                     KeyCode::Char('q') => Some(Action::Quit),
+                    KeyCode::Tab => Some(Action::SwitchSrc),
+                    KeyCode::Char('o') => Some(Action::DuplicateDir),
                     KeyCode::Char('/') => Some(Action::StartSearch),
                     KeyCode::Char('c') => Some(Action::Copy),
                     KeyCode::Char('m') => Some(Action::Move),
                     KeyCode::Char('d') => Some(Action::Delete),
                     KeyCode::Char('i') => Some(Action::StartCreateDir),
-                    KeyCode::Tab => Some(Action::SwitchSrc),
                     _ => None,
                 }
             } else {
@@ -67,6 +68,7 @@ impl App {
         self.src_dir_mut().on_dispatch(action);
         match action {
             Action::SwitchSrc => self.src_index = 1 - self.src_index,
+            Action::DuplicateDir => self.duplicate_dir(),
             Action::ChangeDir(path) => self.change_dir(path.as_path()),
             Action::ChangeDirToParent(path) => self.change_dir_to_parent(path.as_path()),
             Action::StartSearch => self.search_line = Some(SearchLine::new()),
@@ -92,6 +94,12 @@ impl App {
         }
     }
 
+    fn duplicate_dir(&mut self) {
+        let path = self.dest_dir().path();
+        if let Ok(dir) = Dir::new(Rc::clone(&self.config), path.as_path()) {
+            self.dirs[self.src_index] = dir;
+        }
+    }
     fn change_dir(&mut self, path: &Path) {
         if let Ok(dir) = Dir::new(Rc::clone(&self.config), path) {
             self.dirs[self.src_index] = dir;
