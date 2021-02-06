@@ -1,12 +1,19 @@
 use crossterm::event::{KeyCode, KeyEvent};
-use std::{io, path::Path, rc::Rc};
+use std::{
+    io,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     Frame,
 };
 
-use crate::{action::Action, config::Config, dir::Dir, input::InputBox, search::SearchLine};
+use crate::{
+    action::Action, bookmark::Bookmarks, config::Config, dir::Dir, input::InputBox,
+    search::SearchLine,
+};
 
 enum InputMode {
     CreateDir(InputBox),
@@ -18,6 +25,7 @@ pub struct App {
     src_index: usize,
     search_line: Option<SearchLine>,
     input_mode: Option<InputMode>,
+    bookmarks: Option<Bookmarks>,
 }
 
 impl App {
@@ -33,6 +41,7 @@ impl App {
             src_index,
             search_line: None,
             input_mode: None,
+            bookmarks: None,
         })
     }
 
@@ -44,6 +53,8 @@ impl App {
             }
         } else if let Some(ref mut search_line) = self.search_line {
             search_line.on_event(key)
+        } else if let Some(ref mut bookmarks) = self.bookmarks {
+            bookmarks.on_event(key)
         } else {
             let action = self.src_dir().on_event(key);
             if action.is_none() {
@@ -56,6 +67,7 @@ impl App {
                     KeyCode::Char('m') => Some(Action::Move),
                     KeyCode::Char('d') => Some(Action::Delete),
                     KeyCode::Char('i') => Some(Action::StartCreateDir),
+                    KeyCode::Char('b') => Some(Action::OpenBookmarks),
                     _ => None,
                 }
             } else {
@@ -90,6 +102,8 @@ impl App {
                 }
                 self.input_mode = None;
             }
+            Action::OpenBookmarks => self.open_bookmarks(),
+            Action::CloseBookmarks(path) => self.close_bookmarks(path),
             _ => {}
         }
     }
@@ -134,6 +148,17 @@ impl App {
             self.src_dir_mut().refresh();
         }
     }
+    fn open_bookmarks(&mut self) {
+        self.bookmarks = Some(Bookmarks::new(Rc::clone(&self.config)));
+    }
+    fn close_bookmarks(&mut self, path: &Option<PathBuf>) {
+        if let Some(path) = path {
+            if let Ok(dir) = Dir::new(Rc::clone(&self.config), path.as_path()) {
+                self.dirs[self.src_index] = dir;
+            }
+        }
+        self.bookmarks = None;
+    }
 
     pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
         let main_height = area.height - 1;
@@ -157,6 +182,9 @@ impl App {
                 InputMode::CreateDir(input) => input.on_draw(f, v_chunks[1]),
                 //_ => {}
             }
+        }
+        if let Some(ref mut bookmarks) = self.bookmarks {
+            bookmarks.on_draw(f, chunks[self.src_index]);
         }
     }
 

@@ -184,14 +184,10 @@ impl Dir {
     }
     fn on_edit(&self) -> Option<Action> {
         match self.state.selected() {
-            Some(0) => None,
+            Some(0) => Some(Action::Edit(self.path().clone())),
             Some(index) => {
                 let entry = &self.entries[index - 1];
-                if entry.is_dir() {
-                    None
-                } else {
-                    Some(Action::Edit(entry.raw.path().clone()))
-                }
+                Some(Action::Edit(entry.raw.path().clone()))
             }
             _ => None,
         }

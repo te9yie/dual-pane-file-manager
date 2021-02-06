@@ -1,5 +1,7 @@
 # dual-pane-file-manager
 
+![screenshot](docs/screenshot.png)
+
 Rustの勉強がてら作るTUI2画面ファイラ
 
 srcウィンドウとdestウィンドウの2画面
@@ -24,16 +26,15 @@ srcウィンドウが操作対象
 - `m` 移動
 - `d` 削除
 - `i` ディレクトリ作成
+- `b` ブックマーク
 
 *: 設定ファイルで指定する。
-
-これから
-- `b` ブックマーク
 
 ## Customize
 
 `~/.config/dual-pane-file-manager/settings.json` が設定ファイル。
 実行・編集に何を使うかを設定する。`%p` がファイルパスに変換される。
+ブックマークのパスリストを設定する。
 
 ```
 {
@@ -44,7 +45,10 @@ srcウィンドウが操作対象
     "edit_command": {
         "program": "gvim",
         "args": "%p"
-    }
+    },
+    "bookmarks": [
+        "C:\\Users\\i"
+    ]
 }
 ```
 

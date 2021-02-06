@@ -14,6 +14,7 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 mod action;
 mod app;
+mod bookmark;
 mod config;
 mod dir;
 mod input;

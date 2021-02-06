@@ -26,6 +26,7 @@ struct ExecCommand {
 pub struct Config {
     exec_command: Option<ExecCommand>,
     edit_command: Option<ExecCommand>,
+    bookmarks: Option<Vec<String>>,
 }
 
 impl Config {
@@ -45,6 +46,13 @@ impl Config {
 
     #[cfg(target_os = "windows")]
     fn default_self() -> Self {
+        let mut bookmarks = Vec::<String>::new();
+        if let Some(dir) = dirs::home_dir() {
+            bookmarks.push(dir.to_string_lossy().to_string());
+        }
+        if let Some(dir) = dirs::desktop_dir() {
+            bookmarks.push(dir.to_string_lossy().to_string());
+        }
         Self {
             exec_command: Some(ExecCommand {
                 program: "explorer".to_owned(),
@@ -54,15 +62,33 @@ impl Config {
                 program: "gvim".to_owned(),
                 args: "%p".to_owned(),
             }),
+            bookmarks: if bookmarks.is_empty() {
+                None
+            } else {
+                Some(bookmarks)
+            },
         }
     }
 
     #[cfg(not(target_os = "windows"))]
     fn default_self() -> Self {
+        let mut bookmarks = Vec::<String>::new();
+        if let Some(dir) = dirs::home_dir() {
+            bookmarks.push(dir.to_string_lossy().to_string());
+        }
         Self {
             exec_command: None,
             edit_command: None,
+            bookmarks: if bookmarks.is_empty() {
+                None
+            } else {
+                Some(bookmarks)
+            },
         }
+    }
+
+    pub fn bookmarks(&self) -> &Option<Vec<String>> {
+        &self.bookmarks
     }
 
     pub fn exec(&self, path: &Path, dir: &Path) {
