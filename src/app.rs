@@ -17,6 +17,7 @@ use crate::{
 
 enum InputMode {
     CreateDir(InputBox),
+    Rename(InputBox),
 }
 
 pub struct App {
@@ -49,7 +50,7 @@ impl App {
         if let Some(ref mut input_mode) = self.input_mode {
             match input_mode {
                 InputMode::CreateDir(input) => input.on_event(key),
-                //_ => {}
+                InputMode::Rename(input) => input.on_event(key),
             }
         } else if let Some(ref mut search_line) = self.search_line {
             search_line.on_event(key)
@@ -93,10 +94,18 @@ impl App {
                 let mode = InputMode::CreateDir(InputBox::new("Dir: ".to_string()));
                 self.input_mode = Some(mode);
             }
+            Action::StartRename(name) => {
+                let mode = InputMode::Rename(InputBox::new_with_default(
+                    "Rename: ".to_string(),
+                    name.to_owned(),
+                ));
+                self.input_mode = Some(mode);
+            }
             Action::EndInputText(value) => {
                 if let Some(value) = value {
                     match self.input_mode {
                         Some(InputMode::CreateDir(_)) => self.create_dir(value),
+                        Some(InputMode::Rename(_)) => self.rename(value),
                         _ => {}
                     }
                 }
@@ -148,6 +157,12 @@ impl App {
             self.src_dir_mut().refresh();
         }
     }
+    fn rename(&mut self, name: &String) {
+        if !name.is_empty() {
+            self.src_dir_mut().rename(name);
+            self.src_dir_mut().refresh();
+        }
+    }
     fn open_bookmarks(&mut self) {
         self.bookmarks = Some(Bookmarks::new(Rc::clone(&self.config)));
     }
@@ -180,7 +195,7 @@ impl App {
         if let Some(ref mut input_mode) = self.input_mode {
             match input_mode {
                 InputMode::CreateDir(input) => input.on_draw(f, v_chunks[1]),
-                //_ => {}
+                InputMode::Rename(input) => input.on_draw(f, v_chunks[1]),
             }
         }
         if let Some(ref mut bookmarks) = self.bookmarks {

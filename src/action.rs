@@ -21,6 +21,7 @@ pub enum Action {
     Move,
     Delete,
     StartCreateDir,
+    StartRename(String),
     EndInputText(Option<String>),
     OpenBookmarks,
     CloseBookmarks(Option<PathBuf>),

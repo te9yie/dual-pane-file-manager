@@ -150,6 +150,7 @@ impl Dir {
             KeyCode::Char(' ') => Some(Action::ToggleMark),
             KeyCode::Enter => self.on_enter(),
             KeyCode::Char('e') => self.on_edit(),
+            KeyCode::Char('r') => self.on_rename(),
             _ => None,
         }
     }
@@ -160,7 +161,7 @@ impl Dir {
             Some(index) => {
                 let entry = &self.entries[index - 1];
                 if entry.is_dir() {
-                    Some(Action::ChangeDir(entry.raw.path().clone()))
+                    Some(Action::ChangeDir(entry.raw.path()))
                 } else {
                     None
                 }
@@ -174,9 +175,9 @@ impl Dir {
             Some(index) => {
                 let entry = &self.entries[index - 1];
                 if entry.is_dir() {
-                    Some(Action::ChangeDir(entry.raw.path().clone()))
+                    Some(Action::ChangeDir(entry.raw.path()))
                 } else {
-                    Some(Action::Execute(entry.raw.path().clone()))
+                    Some(Action::Execute(entry.raw.path()))
                 }
             }
             _ => None,
@@ -187,7 +188,20 @@ impl Dir {
             Some(0) => Some(Action::Edit(self.path().clone())),
             Some(index) => {
                 let entry = &self.entries[index - 1];
-                Some(Action::Edit(entry.raw.path().clone()))
+                let path = entry.raw.path();
+                Some(Action::Edit(path))
+            }
+            _ => None,
+        }
+    }
+    fn on_rename(&self) -> Option<Action> {
+        match self.state.selected() {
+            Some(0) => None,
+            Some(index) => {
+                let entry = &self.entries[index - 1];
+                let name = entry.raw.file_name();
+                let name = name.to_string_lossy().to_string();
+                Some(Action::StartRename(name))
             }
             _ => None,
         }
@@ -303,6 +317,21 @@ impl Dir {
         path.push(name);
         match fs::create_dir(path) {
             Err(e) => eprintln!("{}", e.to_string()),
+            _ => {}
+        }
+    }
+    pub fn rename(&mut self, name: &String) {
+        match self.state.selected() {
+            Some(0) => {}
+            Some(index) => {
+                let mut path = self.path().clone();
+                path.push(name);
+                let entry = &mut self.entries[index - 1];
+                match fs::rename(entry.raw.path(), path) {
+                    Err(e) => eprintln!("{}", e.to_string()),
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }

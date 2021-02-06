@@ -21,6 +21,9 @@ impl InputBox {
             value: String::new(),
         }
     }
+    pub fn new_with_default(prefix: String, value: String) -> Self {
+        Self { prefix, value }
+    }
 
     pub fn on_event(&mut self, key: &KeyEvent) -> Option<Action> {
         match key.code {
