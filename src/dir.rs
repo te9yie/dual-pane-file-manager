@@ -302,6 +302,14 @@ impl Dir {
             }
         }
     }
+    pub fn create_dir(&mut self, name: &String) {
+        let mut path = self.path.clone();
+        path.push(name);
+        match fs::create_dir(path) {
+            Err(e) => eprintln!("{}", e.to_string()),
+            _ => {}
+        }
+    }
 
     pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect, is_src: bool) {
         let modified = get_modified(fs::metadata(self.path.as_path()).ok());

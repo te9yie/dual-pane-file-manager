@@ -16,6 +16,7 @@ mod action;
 mod app;
 mod config;
 mod dir;
+mod input;
 mod search;
 
 struct Main {

@@ -1,19 +1,23 @@
-use std::{io, path::Path, rc::Rc};
-
 use crossterm::event::{KeyCode, KeyEvent};
+use std::{io, path::Path, rc::Rc};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     Frame,
 };
 
-use crate::{action::Action, config::Config, dir::Dir, search::SearchLine};
+use crate::{action::Action, config::Config, dir::Dir, input::InputBox, search::SearchLine};
+
+enum InputMode {
+    CreateDir(InputBox),
+}
 
 pub struct App {
     config: Rc<Config>,
     dirs: [Dir; 2],
     src_index: usize,
     search_line: Option<SearchLine>,
+    input_mode: Option<InputMode>,
 }
 
 impl App {
@@ -28,11 +32,17 @@ impl App {
             dirs,
             src_index,
             search_line: None,
+            input_mode: None,
         })
     }
 
     pub fn on_event(&mut self, key: &KeyEvent) -> Option<Action> {
-        if let Some(ref mut search_line) = self.search_line {
+        if let Some(ref mut input_mode) = self.input_mode {
+            match input_mode {
+                InputMode::CreateDir(input) => input.on_event(key),
+                //_ => {}
+            }
+        } else if let Some(ref mut search_line) = self.search_line {
             search_line.on_event(key)
         } else {
             let action = self.src_dir().on_event(key);
@@ -43,6 +53,7 @@ impl App {
                     KeyCode::Char('c') => Some(Action::Copy),
                     KeyCode::Char('m') => Some(Action::Move),
                     KeyCode::Char('d') => Some(Action::Delete),
+                    KeyCode::Char('i') => Some(Action::StartCreateDir),
                     KeyCode::Tab => Some(Action::SwitchSrc),
                     _ => None,
                 }
@@ -64,6 +75,19 @@ impl App {
             Action::Copy => self.copy_marks(),
             Action::Move => self.move_marks(),
             Action::Delete => self.delete_marks(),
+            Action::StartCreateDir => {
+                let mode = InputMode::CreateDir(InputBox::new("Dir: ".to_string()));
+                self.input_mode = Some(mode);
+            }
+            Action::EndInputText(value) => {
+                if let Some(value) = value {
+                    match self.input_mode {
+                        Some(InputMode::CreateDir(_)) => self.create_dir(value),
+                        _ => {}
+                    }
+                }
+                self.input_mode = None;
+            }
             _ => {}
         }
     }
@@ -96,6 +120,12 @@ impl App {
         self.src_dir_mut().delete_marks();
         self.src_dir_mut().refresh();
     }
+    fn create_dir(&mut self, name: &String) {
+        if !name.is_empty() {
+            self.src_dir_mut().create_dir(name);
+            self.src_dir_mut().refresh();
+        }
+    }
 
     pub fn on_draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
         let main_height = area.height - 1;
@@ -113,6 +143,12 @@ impl App {
         }
         if let Some(ref mut line) = self.search_line {
             line.on_draw(f, v_chunks[1]);
+        }
+        if let Some(ref mut input_mode) = self.input_mode {
+            match input_mode {
+                InputMode::CreateDir(input) => input.on_draw(f, v_chunks[1]),
+                //_ => {}
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 pub enum Action {
+    Refresh,
     Quit,
     CursorUp,
     CursorDown,
@@ -18,4 +19,6 @@ pub enum Action {
     Copy,
     Move,
     Delete,
+    StartCreateDir,
+    EndInputText(Option<String>),
 }
