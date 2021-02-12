@@ -62,7 +62,7 @@ fn main() {
         let action: Option<Action> = if let Ok(message) = rx.try_recv() {
             app.push_message(message);
             Some(Action::Refresh)
-        } else if poll(Duration::from_millis(1)).unwrap_or(false) {
+        } else if poll(Duration::from_millis(100)).unwrap_or(false) {
             match read() {
                 Ok(event) => match event {
                     Event::Key(key) => app.on_event(&key),
