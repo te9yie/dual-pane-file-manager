@@ -7,6 +7,8 @@ use std::{
     io,
     path::{Path, PathBuf},
     rc::Rc,
+    sync::mpsc::Sender,
+    thread,
 };
 use tui::{
     backend::Backend,
@@ -268,47 +270,69 @@ impl Dir {
             self.state.select(Some(index));
         }
     }
-    pub fn copy_marks(&mut self, dest_dir: &Path) {
+    pub fn copy_marks(&mut self, tx: &Sender<String>, dest_dir: &Path) {
         for entry in self.entries.iter_mut() {
             if entry.mark {
+                entry.mark = false;
+                let tx = tx.clone();
+                let src = entry.raw.path();
                 let mut dest = PathBuf::from(dest_dir);
                 dest.push(entry.raw.file_name());
-                match fs::copy(entry.raw.path(), dest) {
-                    Err(e) => eprintln!("{}", e.to_string()),
-                    _ => {}
-                }
-                entry.mark = false;
+                thread::spawn(move || match fs::copy(src, dest) {
+                    Err(e) => {
+                        let _ = tx.send(format!("Err: {}", e.to_string()));
+                    }
+                    _ => {
+                        let _ = tx.send(String::new());
+                    }
+                });
             }
         }
     }
-    pub fn move_marks(&mut self, dest_dir: &Path) {
+    pub fn move_marks(&mut self, tx: &Sender<String>, dest_dir: &Path) {
         for entry in self.entries.iter_mut() {
             if entry.mark {
+                entry.mark = false;
+                let tx = tx.clone();
+                let src = entry.raw.path();
                 let mut dest = PathBuf::from(dest_dir);
                 dest.push(entry.raw.file_name());
-                match fs::rename(entry.raw.path(), dest) {
-                    Err(e) => eprintln!("{}", e.to_string()),
-                    _ => {}
-                }
-                entry.mark = false;
+                thread::spawn(move || match fs::rename(src, dest) {
+                    Err(e) => {
+                        let _ = tx.send(format!("Err: {}", e.to_string()));
+                    }
+                    _ => {
+                        let _ = tx.send(String::new());
+                    }
+                });
             }
         }
     }
-    pub fn delete_marks(&mut self) {
+    pub fn delete_marks(&mut self, tx: &Sender<String>) {
         for entry in self.entries.iter_mut() {
             if entry.mark {
+                entry.mark = false;
+                let tx = tx.clone();
+                let src = entry.raw.path();
                 if entry.is_dir() {
-                    match fs::remove_dir_all(entry.raw.path()) {
-                        Err(e) => eprintln!("{}", e.to_string()),
-                        _ => {}
-                    }
+                    thread::spawn(move || match fs::remove_dir_all(src) {
+                        Err(e) => {
+                            let _ = tx.send(format!("{}", e.to_string()));
+                        }
+                        _ => {
+                            let _ = tx.send(String::new());
+                        }
+                    });
                 } else {
-                    match fs::remove_file(entry.raw.path()) {
-                        Err(e) => eprintln!("{}", e.to_string()),
-                        _ => {}
-                    }
+                    thread::spawn(move || match fs::remove_file(src) {
+                        Err(e) => {
+                            let _ = tx.send(format!("{}", e.to_string()));
+                        }
+                        _ => {
+                            let _ = tx.send(String::new());
+                        }
+                    });
                 }
-                entry.mark = false;
             }
         }
     }

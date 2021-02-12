@@ -3,10 +3,13 @@ use std::{
     io,
     path::{Path, PathBuf},
     rc::Rc,
+    sync::mpsc::Sender,
 };
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
+    text::{Span, Spans},
+    widgets::Paragraph,
     Frame,
 };
 
@@ -22,15 +25,17 @@ enum InputMode {
 
 pub struct App {
     config: Rc<Config>,
+    tx: Sender<String>,
     dirs: [Dir; 2],
     src_index: usize,
     search_line: Option<SearchLine>,
     input_mode: Option<InputMode>,
     bookmarks: Option<Bookmarks>,
+    message: String,
 }
 
 impl App {
-    pub fn new(config: Rc<Config>, path: &Path) -> io::Result<Self> {
+    pub fn new(config: Rc<Config>, tx: Sender<String>, path: &Path) -> io::Result<Self> {
         let dirs = [
             Dir::new(Rc::clone(&config), path)?,
             Dir::new(Rc::clone(&config), path)?,
@@ -38,11 +43,13 @@ impl App {
         let src_index = 0usize;
         Ok(Self {
             config,
+            tx,
             dirs,
             src_index,
             search_line: None,
             input_mode: None,
             bookmarks: None,
+            message: String::from("Welcome."),
         })
     }
 
@@ -80,6 +87,11 @@ impl App {
     pub fn on_dispatch(&mut self, action: &Action) {
         self.src_dir_mut().on_dispatch(action);
         match action {
+            Action::Refresh => {
+                for dir in self.dirs.iter_mut() {
+                    dir.refresh();
+                }
+            }
             Action::SwitchSrc => self.src_index = 1 - self.src_index,
             Action::DuplicateDir => self.duplicate_dir(),
             Action::ChangeDir(path) => self.change_dir(path.as_path()),
@@ -116,6 +128,9 @@ impl App {
             _ => {}
         }
     }
+    pub fn push_message(&mut self, message: String) {
+        self.message = message;
+    }
 
     fn duplicate_dir(&mut self) {
         let path = self.dest_dir().path();
@@ -137,18 +152,20 @@ impl App {
     }
     fn copy_marks(&mut self) {
         let path = self.dest_dir().path();
-        self.src_dir_mut().copy_marks(path.as_path());
+        let tx = self.tx.clone();
+        self.src_dir_mut().copy_marks(&tx, path.as_path());
         self.src_dir_mut().refresh();
-        self.dest_dir_mut().refresh();
     }
     fn move_marks(&mut self) {
         let path = self.dest_dir().path();
-        self.src_dir_mut().move_marks(path.as_path());
+        let tx = self.tx.clone();
+        self.src_dir_mut().move_marks(&tx, path.as_path());
         self.src_dir_mut().refresh();
         self.dest_dir_mut().refresh();
     }
     fn delete_marks(&mut self) {
-        self.src_dir_mut().delete_marks();
+        let tx = self.tx.clone();
+        self.src_dir_mut().delete_marks(&tx);
         self.src_dir_mut().refresh();
     }
     fn create_dir(&mut self, name: &String) {
@@ -185,6 +202,11 @@ impl App {
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(v_chunks[0]);
+        if !self.message.is_empty() {
+            let text = vec![Spans::from(vec![Span::raw(self.message.clone())])];
+            let paragraph = Paragraph::new(text);
+            f.render_widget(paragraph, v_chunks[1]);
+        }
         for (i, chunk) in chunks.iter().enumerate() {
             let is_src = i == self.src_index;
             self.dirs[i].on_draw(f, *chunk, is_src);

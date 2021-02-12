@@ -3,7 +3,7 @@ use tui::{
     backend::Backend,
     layout::Rect,
     text::{Span, Spans},
-    widgets::Paragraph,
+    widgets::{Clear, Paragraph},
     Frame,
 };
 
@@ -40,6 +40,7 @@ impl SearchLine {
             Span::raw(self.pattern.clone()),
         ])];
         let paragraph = Paragraph::new(text);
+        f.render_widget(Clear, area);
         f.render_widget(paragraph, area);
     }
 }
