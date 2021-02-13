@@ -277,20 +277,31 @@ impl Dir {
                 entry.mark = false;
                 let tx = tx.clone();
                 let src = entry.raw.path();
-                let mut dest = PathBuf::from(dest_dir);
-                dest.push(entry.raw.file_name());
-                thread::spawn(move || {
-                    let mut opt = dir::CopyOptions::default();
-                    opt.copy_inside = true;
-                    match dir::copy(src, dest, &opt) {
+                if entry.is_dir() {
+                    let dest = PathBuf::from(dest_dir);
+                    thread::spawn(move || {
+                        let opt = dir::CopyOptions::default();
+                        match dir::copy(src, dest, &opt) {
+                            Err(e) => {
+                                let _ = tx.send(format!("Err: {}", e.to_string()));
+                            }
+                            _ => {
+                                let _ = tx.send(String::new());
+                            }
+                        }
+                    });
+                } else {
+                    let mut dest = PathBuf::from(dest_dir);
+                    dest.push(entry.raw.file_name());
+                    thread::spawn(move || match fs::copy(src, dest) {
                         Err(e) => {
                             let _ = tx.send(format!("Err: {}", e.to_string()));
                         }
                         _ => {
                             let _ = tx.send(String::new());
                         }
-                    }
-                });
+                    });
+                }
             }
         }
     }
