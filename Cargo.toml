@@ -10,6 +10,7 @@ edition = "2018"
 chrono = "*"
 crossterm = "*"
 dirs = "*"
+fs_extra = "*"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tui = { version = "*", default-features = false, features = ["crossterm"] }

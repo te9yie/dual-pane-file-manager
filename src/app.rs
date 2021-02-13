@@ -154,19 +154,15 @@ impl App {
         let path = self.dest_dir().path();
         let tx = self.tx.clone();
         self.src_dir_mut().copy_marks(&tx, path.as_path());
-        self.src_dir_mut().refresh();
     }
     fn move_marks(&mut self) {
         let path = self.dest_dir().path();
         let tx = self.tx.clone();
         self.src_dir_mut().move_marks(&tx, path.as_path());
-        self.src_dir_mut().refresh();
-        self.dest_dir_mut().refresh();
     }
     fn delete_marks(&mut self) {
         let tx = self.tx.clone();
         self.src_dir_mut().delete_marks(&tx);
-        self.src_dir_mut().refresh();
     }
     fn create_dir(&mut self, name: &String) {
         if !name.is_empty() {
@@ -234,7 +230,9 @@ impl App {
     fn dest_dir(&self) -> &Dir {
         &self.dirs[1 - self.src_index]
     }
+    /*
     fn dest_dir_mut(&mut self) -> &mut Dir {
         &mut self.dirs[1 - self.src_index]
     }
+    */
 }
